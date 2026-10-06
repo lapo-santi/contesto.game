@@ -1,0 +1,1 @@
+{"name":"contesto-game","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test scripts/engine.test.js","start":"python3 -m http.server 8000 --directory dist"}}
