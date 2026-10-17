@@ -50,3 +50,9 @@ export function decodeRankings(buffer, size, target) {
   if (ranks[target] !== 1) throw new Error('Soluzione non valida');
   return {ranks, ordered};
 }
+
+// Switch scoring at an Italian day boundary, preserving games already in progress.
+export function rankingDatasetForDay(day, data) {
+  const change = data.rankingChange;
+  return change && day < change.effectiveFrom ? change.previousDataset : data.dataset;
+}

@@ -1,0 +1,106 @@
+{
+  "beforeSource": "spaCy it_core_news_md 3.7.0",
+  "afterSource": "spaCy it_core_news_lg 3.7.0",
+  "words": 139545,
+  "calendarPreserved": true,
+  "pairs": [
+    {
+      "words": [
+        "santo",
+        "santifica"
+      ],
+      "before": 0.595061,
+      "after": 0.552697
+    },
+    {
+      "words": [
+        "santifica",
+        "santità"
+      ],
+      "before": 1.0,
+      "after": 0.697734
+    },
+    {
+      "words": [
+        "santifica",
+        "castità"
+      ],
+      "before": 1.0,
+      "after": 0.467604
+    },
+    {
+      "words": [
+        "santo",
+        "pio"
+      ],
+      "before": 1.0,
+      "after": 0.543656
+    },
+    {
+      "words": [
+        "santo",
+        "santoro"
+      ],
+      "before": 1.0,
+      "after": 0.65152
+    },
+    {
+      "words": [
+        "cane",
+        "gatto"
+      ],
+      "before": 0.849016,
+      "after": 0.849016
+    },
+    {
+      "words": [
+        "cane",
+        "tastiera"
+      ],
+      "before": 0.070875,
+      "after": 0.070875
+    },
+    {
+      "words": [
+        "mare",
+        "spiaggia"
+      ],
+      "before": 0.645907,
+      "after": 0.645907
+    },
+    {
+      "words": [
+        "mare",
+        "martello"
+      ],
+      "before": 0.183922,
+      "after": 0.183922
+    },
+    {
+      "words": [
+        "santifica",
+        "santificare"
+      ],
+      "before": 0.393328,
+      "after": 0.747501
+    }
+  ],
+  "reportedPuzzle": {
+    "santo": {
+      "before": 1171,
+      "after": 497
+    },
+    "santifica": {
+      "before": 116,
+      "after": 172
+    },
+    "santità": {
+      "before": 114,
+      "after": 16
+    },
+    "castità": {
+      "before": 115,
+      "after": 62
+    }
+  }
+}

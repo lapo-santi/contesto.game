@@ -1,4 +1,4 @@
-import {italianDay,dayNumber,targetForDay,normalise,decodeRankings,rowStyle,nextMidnight} from './engine.js';
+import {italianDay,dayNumber,targetForDay,normalise,decodeRankings,rankingDatasetForDay,rowStyle,nextMidnight} from './engine.js?v=3-lg';
 const $=id=>document.getElementById(id);
 let data,lookup,rankings,day,state,ready=false,storageWorks=true;
 const emptyState=$('guesses').innerHTML;
@@ -11,7 +11,7 @@ async function startDay(){
   message('Caricamento della parola del giorno…');
   const nextDay=italianDay(), target=targetForDay(nextDay,data.targets);
   try {
-    const response=await fetch(`./data/ranks/${data.dataset}/${target}.bin`);
+    const response=await fetch(`./data/ranks/${rankingDatasetForDay(nextDay,data)}/${target}.bin`);
     if(!response.ok)throw new Error('Classifica non disponibile');
     const nextRankings=decodeRankings(await response.arrayBuffer(),data.words.length,target);
     day=nextDay; rankings=nextRankings; state=load();

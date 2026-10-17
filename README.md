@@ -10,7 +10,7 @@ La classifica riguarda le parole del giocatore, non una classifica pubblica tra 
 
 ## Come funziona la distanza
 
-Il vocabolario usa vettori italiani preaddestrati di spaCy `it_core_news_md` 3.7.0. La selezione parte dalle 200.000 parole più frequenti di wordfreq e conserva solo parole alfabetiche con un vettore disponibile: il vocabolario comprende 139.545 parole (prima erano 33.142), incluse molte forme flesse. Non è un dizionario completo: rimangono esclusi i termini senza un vettore disponibile. I vettori sono normalizzati e quantizzati in interi a 8 bit per ridurre il download. Durante la preparazione dei dati, per ogni soluzione si calcola la similarità coseno di tutte le parole; la classifica decrescente delle similarità determina la posizione mostrata. Il browser scarica soltanto la classifica della soluzione del giorno, già calcolata, e non deve scaricare o confrontare i vettori. Si usa quindi una **posizione semantica**, non una distanza tra lettere, né una percentuale di probabilità. La quantizzazione introduce una piccola approssimazione; a parità di punteggio decide l'indice nel vocabolario. La soluzione è sempre prima.
+Il vocabolario usa vettori italiani preaddestrati di spaCy `it_core_news_lg` 3.7.0. La selezione parte dalle 200.000 parole più frequenti di wordfreq e conserva solo parole alfabetiche con un vettore disponibile: il vocabolario comprende 139.545 parole (prima erano 33.142), incluse molte forme flesse. Non è un dizionario completo: rimangono esclusi i termini senza un vettore disponibile. La versione completa assegna vettori distinti alle parole, evitando la condivisione forzata della versione `md`. I vettori sono normalizzati e quantizzati in interi a 8 bit per mantenere compatto l’archivio di riferimento. Durante la preparazione dei dati, per ogni soluzione si calcola la similarità coseno di tutte le parole; la classifica decrescente delle similarità determina la posizione mostrata. Il browser scarica soltanto la classifica della soluzione del giorno, già calcolata, e non deve scaricare o confrontare i vettori. Si usa quindi una **posizione semantica**, non una distanza tra lettere, né una percentuale di probabilità. La quantizzazione introduce una piccola approssimazione; a parità di punteggio decide l'indice nel vocabolario. La soluzione è sempre prima.
 
 Le soluzioni sono una selezione di nomi comuni, mescolata una sola volta con un seme riproducibile. Il calendario parte il 6 ottobre 2026 e cicla dopo aver esaurito l'elenco. Nessuna parola si ripete entro un ciclo. Il modello può produrre relazioni inattese e non riconoscere alcuni termini, grafie o flessioni. Usa il singolare o un sinonimo quando una parola manca.
 
@@ -37,16 +37,16 @@ I percorsi degli asset sono relativi, quindi funzionano anche sotto la sottocart
 
 ## Riprodurre il vocabolario
 
-Scarica ed estrai il modello indicato da https://huggingface.co/spacy/it_core_news_md (versione 3.7.0). In un ambiente Python separato:
+Scarica ed estrai il modello indicato da https://huggingface.co/spacy/it_core_news_lg (versione 3.7.0). In un ambiente Python separato:
 
 ```sh
 python -m venv .venv
 .venv/bin/pip install numpy==2.5.4 spacy==3.8.16 wordfreq==3.1.1
-.venv/bin/python scripts/prepare-data.py /percorso/it_core_news_md-3.7.0
+.venv/bin/python scripts/prepare-data.py /percorso/it_core_news_lg-3.7.0
 npm test
 ```
 
-La versione effettiva delle dipendenze utilizzate è registrata in `scripts/data-environment.txt`. I file già preparati in `dist/data` permettono di pubblicare senza ripetere questa fase. La preparazione conserva gli indici delle parole già pubblicate e la sequenza delle 568 soluzioni, aggiungendo le nuove parole in coda: i tentativi salvati restano validi e il calendario non cambia. Le posizioni possono cambiare perché la classifica comprende più parole. Lo script usa il `vocabulary.json` già incluso come base e genera anche `dist/data/ranks/<versione>/<soluzione>.bin`. Tutte queste classifiche devono essere pubblicate insieme al vocabolario. Una ricostruzione che riordina gli indici o cambia la sequenza richiede una nuova chiave di salvataggio in `app.js`.
+La versione effettiva delle dipendenze utilizzate è registrata in `scripts/data-environment.txt`. I file già preparati in `dist/data` permettono di pubblicare senza ripetere questa fase. La preparazione conserva gli indici delle parole già pubblicate e la sequenza delle 568 soluzioni, aggiungendo le nuove parole in coda: i tentativi salvati restano validi e il calendario non cambia. Le posizioni possono cambiare perché la classifica comprende più parole. Lo script usa il `vocabulary.json` già incluso come base e genera anche `dist/data/ranks/<versione>/<soluzione>.bin`. Tutte queste classifiche devono essere pubblicate insieme al vocabolario. Il modello completo è attivo anche per la partita del 17 ottobre 2026 (`rankingChange.effectiveFrom = 2026-10-17`). I tentativi già salvati mantengono le proprie parole e vengono mostrati con le nuove posizioni. Le date precedenti conservano la vecchia classifica. I file della versione precedente restano pubblicati per compatibilità con le partite aperte. Per fissare esplicitamente la data durante la preparazione usa `--effective-from YYYY-MM-DD`. Una ricostruzione che riordina gli indici o cambia la sequenza richiede una nuova chiave di salvataggio in `app.js`.
 
 ## Licenze e attribuzioni
 
@@ -54,3 +54,16 @@ La versione effettiva delle dipendenze utilizzate è registrata in `scripts/data
 - Vettori e dati derivati: **CC BY-NC-SA 3.0**, spaCy / Explosion e autori indicati in `dist/data/LICENSES-SOURCES.txt`. Il file `dist/data/LICENSE-model.txt` conserva la licenza originale. Questa licenza impone attribuzione, uso non commerciale e condivisione dei dati derivati con la stessa licenza. Non si estende automaticamente al codice del sito.
 - wordfreq: Robyn Speer e collaboratori; codice Apache 2.0, dati CC BY-SA 4.0. La selezione del vocabolario derivata dalle frequenze mantiene anche questi obblighi di attribuzione e condivisione. https://github.com/rspeer/wordfreq
 - Nessuna affiliazione con Contexto. Nome, interfaccia e codice del progetto sono indipendenti.
+
+
+## Verificare la revisione semantica
+
+`npm test` verifica tutte le classifiche, il passaggio di versione alla mezzanotte italiana e alcune relazioni semantiche di controllo. Verifica anche che parole prima associate forzatamente allo stesso vettore (per esempio “santifica”, “santità” e “castità”) abbiano rappresentazioni distinte. Questi controlli non garantiscono che ogni associazione del modello corrisponda all’intuizione di ogni giocatore.
+
+Per confrontare due edizioni senza stampare le soluzioni del calendario:
+
+```sh
+.venv/bin/python scripts/semantic-audit.py /percorso/dati-precedenti dist/data
+```
+
+Il confronto incluso in `scripts/semantic-audit.json` riporta le similarità coseno di alcune coppie di parole e le posizioni del caso segnalato, mantenendo nascosta la soluzione. Le posizioni si riferiscono sempre alla soluzione, non alla distanza fra due tentativi.

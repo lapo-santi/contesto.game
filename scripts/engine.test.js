@@ -58,3 +58,44 @@ test('Expanded vocabulary includes previously omitted Italian words',()=>{
  assert.ok(data.words.length>100000);
  for(const word of ['zebra','spicchi','vaccinare','suscettibilità','viticoltura'])assert.ok(data.words.includes(word),word);
 });
+
+test('Scoring switches at the scheduled Italian day without changing the calendar',async()=>{
+ const {rankingDatasetForDay}=await import('../dist/engine.js');
+ const data=JSON.parse(fs.readFileSync(new URL('../dist/data/vocabulary.json',import.meta.url)));
+ const change=data.rankingChange;
+ assert.ok(change);
+ const previousDate=new Date(`${change.effectiveFrom}T12:00:00Z`);
+ previousDate.setUTCDate(previousDate.getUTCDate()-1);
+ assert.equal(rankingDatasetForDay(previousDate.toISOString().slice(0,10),data),change.previousDataset);
+ assert.equal(rankingDatasetForDay('2026-10-17',data),data.dataset);
+ assert.equal(rankingDatasetForDay(change.effectiveFrom,data),data.dataset);
+ assert.equal(rankingDatasetForDay('2099-01-01',data),data.dataset);
+ assert.equal(rankingDatasetForDay('2026-10-17',{dataset:'single'}),'single');
+ const before=fs.readFileSync(new URL(`../dist/data/ranks/${change.previousDataset}/${data.targets[0]}.bin`,import.meta.url));
+ const {decodeRankings}=await import('../dist/engine.js');
+ decodeRankings(before.buffer.slice(before.byteOffset,before.byteOffset+before.byteLength),data.words.length,data.targets[0]);
+});
+
+test('Complete Italian model distinguishes words previously forced to share a vector',()=>{
+ const data=JSON.parse(fs.readFileSync(new URL('../dist/data/vocabulary.json',import.meta.url)));
+ const bytes=fs.readFileSync(new URL('../dist/data/vectors.bin',import.meta.url));
+ const vector=word=>{
+  const id=data.words.indexOf(word);
+  assert.ok(id>=0,word);
+  return new Int8Array(bytes.subarray(id*data.dimensions,(id+1)*data.dimensions));
+ };
+ const cosine=(a,b)=>{
+  const x=vector(a),y=vector(b);
+  let dot=0,nx=0,ny=0;
+  for(let j=0;j<x.length;j++){dot+=x[j]*y[j];nx+=x[j]*x[j];ny+=y[j]*y[j];}
+  return dot/Math.sqrt(nx*ny);
+ };
+ assert.equal(data.model.name,'it_core_news_lg');
+ assert.ok(data.model.vocabularyVectorRows>100000);
+ for(const [a,b] of [['santifica','santità'],['santifica','castità'],['santo','pio'],['santo','santoro']]){
+  assert.notDeepEqual(vector(a),vector(b),`${a} and ${b} need separate vectors`);
+ }
+ for(const [a,related,unrelated] of [['cane','gatto','tastiera'],['mare','spiaggia','martello'],['santo','santità','tastiera'],['santifica','santificare','tastiera']]){
+  assert.ok(cosine(a,related)>cosine(a,unrelated),`${a} should be closer to ${related} than ${unrelated}`);
+ }
+});
