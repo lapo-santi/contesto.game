@@ -23,10 +23,30 @@ export function rankVocabulary(vectors, dimensions, target) {
 }
 export function rowStyle(rank,size) {
   const heat=Math.max(0,1-Math.log(rank)/Math.log(size));
-  return {colour:`hsl(${210-heat*115} 48% ${70-heat*8}%)`,width:`${Math.max(3,heat*100)}%`};
+  // Follow the legend from violet through blue and turquoise to lime.
+  // Pale, saturated fills keep the dark word and rank readable.
+  const hue=265-heat*170;
+  return {
+    colour:`linear-gradient(100deg,hsl(${hue} 90% ${84-heat*8}%),hsl(${hue} 90% ${74-heat*8}%))`,
+    width:`${Math.max(8,heat*100)}%`
+  };
 }
 export function nextMidnight(now=new Date()) {
   const today=italianDay(now);let low=now.getTime(),high=low+27*3600000;
   while(high-low>1000){const mid=Math.floor((low+high)/2);if(italianDay(new Date(mid))===today) low=mid;else high=mid;}
   return high;
+}
+
+// Decode an explicitly little-endian rank table, validating before enabling play.
+export function decodeRankings(buffer, size, target) {
+  if (buffer.byteLength !== size * 4) throw new Error('Dati incompleti');
+  const view = new DataView(buffer), ranks = new Uint32Array(size);
+  const ordered = new Uint32Array(size), seen = new Uint8Array(size);
+  for (let id = 0; id < size; id++) {
+    const rank = view.getUint32(id * 4, true);
+    if (rank < 1 || rank > size || seen[rank - 1]) throw new Error('Classifica non valida');
+    ranks[id] = rank; ordered[rank - 1] = id; seen[rank - 1] = 1;
+  }
+  if (ranks[target] !== 1) throw new Error('Soluzione non valida');
+  return {ranks, ordered};
 }

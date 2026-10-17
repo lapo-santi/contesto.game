@@ -34,3 +34,27 @@ test('Packaged vocabulary and ranking are consistent',()=>{
  assert.equal(ranks[data.targets[0]],1);
  assert.equal(new Set(ranks).size,data.words.length);
 });
+
+test('Precomputed daily tables match live cosine ranks and preserve the calendar',async()=>{
+ const {decodeRankings}=await import('../dist/engine.js');
+ const data=JSON.parse(fs.readFileSync(new URL('../dist/data/vocabulary.json',import.meta.url)));
+ assert.equal(data.version,2);
+ for(const target of data.targets){
+  const bytes=fs.readFileSync(new URL(`../dist/data/ranks/${data.dataset}/${target}.bin`,import.meta.url));
+  decodeRankings(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),data.words.length,target);
+ }
+ const target=data.targets[0];
+ const bytes=fs.readFileSync(new URL(`../dist/data/ranks/${data.dataset}/${target}.bin`,import.meta.url));
+ const actual=decodeRankings(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),data.words.length,target);
+ const vectors=new Int8Array(fs.readFileSync(new URL('../dist/data/vectors.bin',import.meta.url)));
+ assert.deepEqual(actual.ranks,rankVocabulary(vectors,data.dimensions,target).ranks);
+ assert.throws(()=>decodeRankings(new ArrayBuffer(4),2,0));
+ assert.throws(()=>decodeRankings(new Uint32Array([1,1]).buffer,2,0));
+ assert.throws(()=>decodeRankings(new Uint32Array([2,1]).buffer,2,0));
+});
+
+test('Expanded vocabulary includes previously omitted Italian words',()=>{
+ const data=JSON.parse(fs.readFileSync(new URL('../dist/data/vocabulary.json',import.meta.url)));
+ assert.ok(data.words.length>100000);
+ for(const word of ['zebra','spicchi','vaccinare','suscettibilità','viticoltura'])assert.ok(data.words.includes(word),word);
+});
