@@ -1,1 +1,90 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f7f2"><meta name="description" content="Una parola segreta al giorno. Segui il significato, trova il contesto."><title>contesto.it — La sfida del giorno</title><link rel="stylesheet" href="style.css"></head><body><div class="shell"><header><a class="brand" href="./">contesto<span class="brand-dot">.it</span></a><button class="icon" id="help" aria-label="Come si gioca">?</button></header><main><div class="eyebrow"><span class="dot"></span> UNA NUOVA PAROLA, OGNI GIORNO <span id="edition"></span></div><h1>La sfida del giorno.<br><span>Trova la parola segreta.</span></h1><p class="intro">Ogni tentativo è un passo verso la soluzione.<br>Segui il significato. Quanto vicino arriverai?</p><section class="game" aria-label="Gioco"><div class="game-meta"><span id="date"></span><span><strong id="count">0</strong> tentativi</span></div><form id="guess-form"><label class="sr-only" for="word">La tua parola</label><input id="word" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Prova una parola in italiano…" maxlength="40" disabled><button id="submit" disabled aria-label="Invia tentativo">↗</button></form><p id="status" role="status" aria-live="polite">Caricamento del vocabolario italiano…</p><div id="last" aria-label="Ultimo tentativo"></div><div class="list-heading"><h2>Le tue parole</h2><span>PIÙ VICINE PER PRIME</span></div><div id="guesses"><div class="empty"><div class="empty-mark">↔</div><p>Da qualche parte si comincia.</p><span>Scrivi la prima parola che ti viene in mente.</span></div></div><div class="scale"><span>Lontano</span><div></div><span>Vicino</span></div><div class="actions"><button id="hint" disabled>Un piccolo aiuto</button><button id="share" hidden>Condividi risultato ↗</button></div></section><aside class="note"><span>01</span><p><strong>Il significato è la bussola.</strong> “Mare” può essere vicino a “spiaggia”, anche se le lettere sono diverse. Il numero è la posizione nel vocabolario: <strong>1 è la soluzione.</strong></p></aside></main><footer><span>Una nuova parola a mezzanotte, ora italiana.</span><span id="countdown"></span></footer></div><dialog id="instructions"><button id="close" class="icon" aria-label="Chiudi">×</button><div class="eyebrow">COME SI GIOCA</div><h2>Trova la parola del giorno.</h2><p>Scrivi una parola italiana e premi Invio. Il modello confronta il suo significato con quello della parola segreta.</p><p><strong>Più il numero è basso, più sei vicino.</strong> I colori passano dal viola per le parole lontane al verde lime per quelle più vicine. La soluzione occupa la posizione 1.</p><p>Tutti giocano con la stessa parola. Cambia a mezzanotte in Italia. I tentativi restano salvati su questo browser; una parola già provata non conta due volte.</p><p>“Un piccolo aiuto” aggiunge una parola più vicina: gli aiuti si contano separatamente. Il vocabolario può non includere nomi propri o termini rari. Le relazioni del modello sono indicative e a volte sorprendenti.</p><p class="credit">Vettori italiani: spaCy it_core_news_lg, CC BY-NC-SA 3.0. Gioco indipendente ispirato a Contexto.</p></dialog><script type="module" src="app.js?v=3-lg"></script></body></html>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f7f2">
+<meta name="description" content="Una parola segreta al giorno. Segui il significato, trova il contesto.">
+<title>contesto.it — La sfida del giorno</title>
+<link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+<div class="shell">
+<header>
+  <a class="brand" href="./">contesto<span class="brand-dot">.it</span></a>
+  <button class="pill" id="help" aria-haspopup="dialog">Come si gioca <span aria-hidden="true">?</span></button>
+</header>
+<main>
+  <div class="eyebrow"><span class="dot"></span> UNA NUOVA PAROLA, OGNI GIORNO <span id="edition"></span></div>
+  <h1>Trova la parola segreta.<br><span>Ti guida il significato, non le lettere.</span></h1>
+  <p class="intro">Ogni parola che provi riceve un numero: quanto è vicina, per significato, alla parola del giorno. <strong>1 è la soluzione.</strong></p>
+
+  <section class="game" aria-label="Gioco">
+    <div class="game-meta"><span id="date"></span><span><strong id="count">0</strong> tentativi</span></div>
+    <form id="guess-form">
+      <label class="sr-only" for="word">La tua parola</label>
+      <input id="word" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Scrivi una parola in italiano…" maxlength="40" disabled>
+      <button id="submit" disabled aria-label="Invia tentativo">↗</button>
+    </form>
+    <p id="status" role="status" aria-live="polite">Caricamento del vocabolario italiano…</p>
+
+    <div id="reveal" hidden></div>
+    <div id="last" aria-label="Ultimo tentativo"></div>
+
+    <div class="list-heading" id="list-heading" hidden><h2>Le tue parole</h2><span>PIÙ VICINE PER PRIME</span></div>
+    <div id="guesses"></div>
+
+    <div id="rules-inline" class="rules-inline">
+      <div class="rules-title">Come si gioca</div>
+      <ol class="steps">
+        <li><b>Scrivi una parola</b> italiana e premi Invio. Va bene qualsiasi parola: nomi, aggettivi, verbi.</li>
+        <li><b>Leggi il numero.</b> È la posizione della tua parola in una classifica di oltre 100.000 parole, ordinate per vicinanza di significato alla parola segreta. <b>1 è la soluzione</b>, 2 la parola più vicina, e così via.</li>
+        <li><b>Avvicinati.</b> Usa le parole con il numero più basso come indizi e prova parole che compaiono negli stessi contesti.</li>
+      </ol>
+      <div class="example">
+        <div class="example-head">Esempio — se la parola segreta fosse <b>pinguino</b>:</div>
+        <div id="example-rows"></div>
+        <p class="example-note">Vicine sono le parole che si usano negli <em>stessi discorsi</em>: altri animali, l'habitat, la categoria. Non contano le lettere: “pinza” somiglia a “pinguino” ma è lontanissima. A volte il modello sorprende: “ghiaccio” è più lontano di “animale”.</p>
+      </div>
+      <ul class="facts">
+        <li><b>Una parola, una voce:</b> maschile, femminile, singolare e plurale contano come la stessa parola (<i>gatte</i> → <i>gatto</i>, <i>belle</i> → <i>bello</i>).</li>
+        <li><b>Niente superlativi:</b> <i>bellissimo</i> non vale, prova <i>bello</i>.</li>
+        <li><b>Tutti hanno la stessa parola</b>, che cambia a mezzanotte, ora italiana.</li>
+      </ul>
+    </div>
+
+    <div class="scale" aria-hidden="true"><span>Lontano</span><div></div><span>Vicino</span></div>
+    <div class="actions">
+      <button id="hint" disabled>Un piccolo aiuto</button>
+      <button id="give-up" disabled>Mi arrendo</button>
+      <button id="share" class="primary" hidden>Condividi risultato ↗</button>
+    </div>
+  </section>
+
+  <aside class="tips">
+    <div class="tips-title">Consigli</div>
+    <div class="tip"><span>01</span><p><strong>Parti largo.</strong> Parole generali come <i>animale</i>, <i>luogo</i>, <i>cibo</i>, <i>sentimento</i> o <i>strumento</i> ti dicono in quale campo cercare.</p></div>
+    <div class="tip"><span>02</span><p><strong>Segui la più vicina.</strong> Quando trovi un numero basso, prova sinonimi, oggetti dello stesso ambiente, azioni collegate.</p></div>
+    <div class="tip"><span>03</span><p><strong>Cambia direzione.</strong> Se i numeri restano alti, il significato è altrove: prova un campo del tutto diverso.</p></div>
+  </aside>
+</main>
+<footer><span>Una nuova parola a mezzanotte, ora italiana.</span><span id="countdown"></span></footer>
+</div>
+
+<dialog id="instructions" aria-labelledby="rules-heading">
+  <button id="close" class="icon" aria-label="Chiudi">×</button>
+  <div class="eyebrow">COME SI GIOCA</div>
+  <h2 id="rules-heading">Indovina la parola del giorno.</h2>
+  <p>Scrivi una parola italiana e premi Invio. Un modello linguistico confronta il suo <strong>significato</strong> con quello della parola segreta e ti dice in che <strong>posizione</strong> si trova.</p>
+  <div class="dialog-rows" id="dialog-rows"></div>
+  <p><strong>Più il numero è basso, più sei vicino.</strong> 1 è la soluzione. I colori vanno dal viola (lontano) al verde lime (vicino): sotto 300 sei caldo, sotto 50 bollente.</p>
+  <p><strong>Come funzionano le associazioni.</strong> Due parole sono vicine se compaiono spesso negli stessi contesti: <i>mare</i> e <i>spiaggia</i>, <i>medico</i> e <i>ospedale</i>, <i>correre</i> e <i>corsa</i>. Contano sinonimi, oggetti dello stesso ambiente, azioni e categorie, non le lettere in comune.</p>
+  <p><strong>Forme delle parole.</strong> Maschile, femminile, singolare e plurale valgono come una parola sola (<i>amiche</i> → <i>amico</i>). I superlativi (<i>bellissimo</i>) e le parole straniere o scritte male non sono accettati.</p>
+  <p><strong>Aiuti e resa.</strong> “Un piccolo aiuto” aggiunge una parola più vicina della tua migliore; gli aiuti si contano a parte. “Mi arrendo” mostra la soluzione.</p>
+  <p>Tutti giocano con la stessa parola, che cambia a mezzanotte in Italia. I tentativi restano salvati in questo browser.</p>
+  <button id="start" class="start">Inizia a giocare</button>
+  <p class="credit">Vettori italiani: spaCy it_core_news_lg (CC BY-NC-SA 3.0). Forme delle parole: Morph-it! (CC BY-SA 2.0). Gioco indipendente ispirato a Contexto.</p>
+</dialog>
+<script type="module" src="app.js?v=4"></script>
+</body>
+</html>

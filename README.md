@@ -4,19 +4,31 @@ Un gioco italiano di vicinanza semantica, ispirato a Contexto. Una parola al gio
 
 ## Giocare
 
-Scrivi una parola e premi Invio. La posizione 1 è la soluzione. Le parole provate sono ordinate dalla più vicina alla più lontana, con colori dal viola (lontano) al verde lime (vicino). I tentativi validi e distinti sono contati e salvati nel browser per ciascun giorno. Gli aiuti sono registrati separatamente. Il risultato si può condividere senza rivelare la parola.
+Alla prima visita si apre la schermata **Come si gioca**; finché non si prova una parola, le regole restano visibili anche nella pagina, con un esempio di associazioni (se la soluzione fosse “pinguino”: delfino 24, uccello 38, animale 706, ghiaccio 1.188…). Le posizioni dell'esempio sono reali e i test verificano che “pinguino” non sia nel calendario.
+
+Scrivi una parola e premi Invio. La posizione 1 è la soluzione. Le parole provate sono ordinate dalla più vicina alla più lontana, con colori dal viola (lontano) al verde lime (vicino); sotto 300 la parola è “calda”, sotto 50 “bollente”. I tentativi validi e distinti sono contati e salvati nel browser per ciascun giorno. Gli aiuti sono registrati separatamente: ogni aiuto mostra una parola a metà strada fra il tuo tentativo migliore e la soluzione, mai oltre la posizione 300. “Mi arrendo” (con conferma) mostra la soluzione. A fine partita compaiono la parola e le dieci più vicine, e il risultato si può condividere senza rivelare la parola.
 
 La classifica riguarda le parole del giocatore, non una classifica pubblica tra giocatori. Il salvataggio è locale: non si trasferisce tra dispositivi e si perde cancellando i dati del sito.
 
+## Forme delle parole
+
+Ogni voce del gioco è una parola, non una forma:
+
+- **Genere e numero** di nomi e aggettivi sono uniti nella forma maschile singolare: *bella, belli, belle → bello*, *gatta, gatte, gatti → gatto*, *attrice → attore*, *case → casa*. Chi scrive una forma vede “*belle* vale come *bello*”. Le parole diverse che sembrano coppie restano separate (*porta/porto*, *politica/politico*, *musica*, *partita*, *fisica*), come i plurali con significato proprio (*soldi*, *occhiali*, *forbici*, *nozze*) e gli infiniti (*tenere* non è *tenero*).
+- **Superlativi** (*bellissimo, grandissime, ottimo, pessima*) non sono accettati: il gioco suggerisce la forma base. Restano *massimo*, *minimo*, *ultimo*, *prossimo*.
+- **Grafie errate, troncamenti e parole straniere** presenti nei testi web (*purtoppo, estat, lestate, with, automne*) non sono giocabili; quando c'è, il gioco propone la parola voluta. Le forme senza accento valgono come quelle accentate (*citta → città*, *perche → perché*); si possono anche scrivere articoli elisi (*l'acqua*).
+
+Le forme restano nel vocabolario con il loro indice, quindi i salvataggi precedenti continuano a funzionare e vengono ricondotti alla voce comune. Le decisioni si basano sul lessico morfologico Morph-it! (tramite spacy-lookups-data 1.0.5), sulla similarità dei vettori e su un elenco rivisto a mano per le 30.000 parole più frequenti (`scripts/lemma-overrides.json`). Le parole più rare che sono anche nomi femminili autonomi restano separate per prudenza. Il resoconto completo di ogni unione ed esclusione si ottiene con `--report`.
+
 ## Come funziona la distanza
 
-Il vocabolario usa vettori italiani preaddestrati di spaCy `it_core_news_lg` 3.7.0. La selezione parte dalle 200.000 parole più frequenti di wordfreq e conserva solo parole alfabetiche con un vettore disponibile: il vocabolario comprende 139.545 parole (prima erano 33.142), incluse molte forme flesse. Non è un dizionario completo: rimangono esclusi i termini senza un vettore disponibile. La versione completa assegna vettori distinti alle parole, evitando la condivisione forzata della versione `md`. I vettori sono normalizzati e quantizzati in interi a 8 bit per mantenere compatto l’archivio di riferimento. Durante la preparazione dei dati, per ogni soluzione si calcola la similarità coseno di tutte le parole; la classifica decrescente delle similarità determina la posizione mostrata. Il browser scarica soltanto la classifica della soluzione del giorno, già calcolata, e non deve scaricare o confrontare i vettori. Si usa quindi una **posizione semantica**, non una distanza tra lettere, né una percentuale di probabilità. La quantizzazione introduce una piccola approssimazione; a parità di punteggio decide l'indice nel vocabolario. La soluzione è sempre prima.
+Il vocabolario usa vettori italiani preaddestrati di spaCy `it_core_news_lg` 3.7.0. La selezione parte dalle 200.000 parole più frequenti di wordfreq e conserva solo parole alfabetiche con un vettore disponibile: 139.545 forme, da cui si ottengono **101.812 voci giocabili** (23.003 forme unite a un'altra voce, 919 superlativi e 13.811 grafie errate o parole straniere escluse). Non è un dizionario completo. I vettori sono normalizzati e quantizzati in interi a 8 bit. Per ogni soluzione si calcola la similarità coseno con tutte le voci giocabili; la classifica decrescente determina la posizione mostrata. Il browser scarica soltanto la classifica della soluzione del giorno, già calcolata, e non deve scaricare o confrontare i vettori. Si usa quindi una **posizione semantica**, non una distanza tra lettere, né una percentuale di probabilità. A parità di punteggio decide l'indice nel vocabolario. La soluzione è sempre prima.
 
-Le soluzioni sono una selezione di nomi comuni, mescolata una sola volta con un seme riproducibile. Il calendario parte il 6 ottobre 2026 e cicla dopo aver esaurito l'elenco. Nessuna parola si ripete entro un ciclo. Il modello può produrre relazioni inattese e non riconoscere alcuni termini, grafie o flessioni. Usa il singolare o un sinonimo quando una parola manca.
+Le soluzioni sono una selezione di nomi comuni, mescolata una sola volta con un seme riproducibile. Il calendario parte il 6 ottobre 2026 e cicla dopo aver esaurito l'elenco. Nessuna parola si ripete entro un ciclo. Con l'unione delle forme, quattro voci future del calendario sono cambiate senza spostare le altre: *capelli → capello*, e *nonna*, *zia*, *figlia* (che coincidevano con *nonno*, *zio*, *figlio*) sono state sostituite da *nipote*, *parente*, *genitore*. L'elenco originale è in `sourceTargets`.
 
-Il sito è interamente statico: non servono API, segreti o server a pagamento. Il primo caricamento dei dati richiede circa 2,18 MB: 1,63 MB di vocabolario e 0,56 MB per la classifica del giorno, rispetto ai precedenti 10,30 MB (circa il 79% in meno, prima della compressione HTTP). Le classifiche hanno percorsi associati alla versione dei dati, così il browser può riutilizzarle dalla cache senza confondere versioni diverse. Il file `vectors.bin` rimane disponibile per verifiche e riproducibilità, ma non viene richiesto durante il gioco. I font sono richiesti a Google Fonts; senza rete si usa il font di sistema.
+Il sito è interamente statico: non servono API, segreti o server a pagamento. Il primo caricamento dei dati richiede circa 2,45 MB prima della compressione HTTP (0,79 MB compressi): 2,04 MB di vocabolario e 0,41 MB per la classifica del giorno. Ogni classifica elenca gli indici delle voci giocabili dalla più vicina alla più lontana (uint32 little-endian). Le classifiche hanno percorsi associati alla versione dei dati, così il browser può riutilizzarle dalla cache senza confondere versioni diverse. Il file `vectors.bin` rimane disponibile per verifiche e riproducibilità, ma non viene richiesto durante il gioco. I font sono richiesti a Google Fonts; senza rete si usa il font di sistema.
 
-**Limite di GitHub Pages:** i dati del gioco, inclusa la sequenza di soluzioni, sono scaricabili e ispezionabili. L'orologio è quello del dispositivo. Questa architettura non protegge da chi bara; per competizioni o premi occorre un backend con calendario e soluzione sul server.
+**Limite di GitHub Pages:** i dati del gioco, inclusa la sequenza di soluzioni, sono scaricabili e ispezionabili. L'orologio è quello del dispositivo. Questa architettura non protegge da chi bara; per competizioni o premi occorre un backend con calendario e soluzione sul server. GitHub Pages consiglia siti sotto 1 GB: pubblica solo la cartella di classifiche indicata da `dataset` in `vocabulary.json` (circa 222 MB).
 
 ## Avvio locale
 
@@ -35,35 +47,44 @@ Il workflow `.github/workflows/pages.yml` verifica i test e pubblica `dist` ad o
 
 I percorsi degli asset sono relativi, quindi funzionano anche sotto la sottocartella di un repository. `contesto.game` è il nome del repository: un dominio personalizzato omonimo richiede di acquistare il dominio e configurarne il DNS.
 
-## Riprodurre il vocabolario
+## Riprodurre i dati
 
-Scarica ed estrai il modello indicato da https://huggingface.co/spacy/it_core_news_lg (versione 3.7.0). In un ambiente Python separato:
+I file in `dist/data` sono già pronti. Per ricostruirli:
 
-```sh
-python -m venv .venv
-.venv/bin/pip install numpy==2.5.4 spacy==3.8.16 wordfreq==3.1.1
-.venv/bin/python scripts/prepare-data.py /percorso/it_core_news_lg-3.7.0
-npm test
-```
+1. **Vettori** (solo se cambia il modello). Scarica ed estrai https://huggingface.co/spacy/it_core_news_lg (versione 3.7.0), poi:
 
-La versione effettiva delle dipendenze utilizzate è registrata in `scripts/data-environment.txt`. I file già preparati in `dist/data` permettono di pubblicare senza ripetere questa fase. La preparazione conserva gli indici delle parole già pubblicate e la sequenza delle 568 soluzioni, aggiungendo le nuove parole in coda: i tentativi salvati restano validi e il calendario non cambia. Le posizioni possono cambiare perché la classifica comprende più parole. Lo script usa il `vocabulary.json` già incluso come base e genera anche `dist/data/ranks/<versione>/<soluzione>.bin`. Tutte queste classifiche devono essere pubblicate insieme al vocabolario. Il modello completo è attivo anche per la partita del 17 ottobre 2026 (`rankingChange.effectiveFrom = 2026-10-17`). I tentativi già salvati mantengono le proprie parole e vengono mostrati con le nuove posizioni. Le date precedenti conservano la vecchia classifica. I file della versione precedente restano pubblicati per compatibilità con le partite aperte. Per fissare esplicitamente la data durante la preparazione usa `--effective-from YYYY-MM-DD`. Una ricostruzione che riordina gli indici o cambia la sequenza richiede una nuova chiave di salvataggio in `app.js`.
+   ```sh
+   python -m venv .venv
+   .venv/bin/pip install numpy==2.5.4 spacy==3.8.16 wordfreq==3.1.1
+   .venv/bin/python scripts/prepare-data.py /percorso/it_core_news_lg-3.7.0
+   ```
+
+   La preparazione conserva gli indici delle parole già pubblicate e il calendario originale.
+
+2. **Voci giocabili e classifiche.** Servono il lessico di spacy-lookups-data 1.0.5 e wordfreq:
+
+   ```sh
+   .venv/bin/pip install numpy wordfreq==3.1.1
+   .venv/bin/pip download --no-deps spacy-lookups-data==1.0.5 -d /tmp/lookups
+   unzip -o /tmp/lookups/spacy_lookups_data-1.0.5-*.whl 'spacy_lookups_data/data/it*' -d /tmp/lookups
+   .venv/bin/python scripts/build-game-data.py /tmp/lookups/spacy_lookups_data/data --report /tmp/forme.tsv
+   npm test
+   ```
+
+   Lo script scrive `dist/data/vocabulary.json` e `dist/data/ranks/<dataset>/<soluzione>.bin`. Si può ripetere: parte sempre da `sourceTargets`. Per correggere un'unione sbagliata, aggiungi la parola a `keepSeparate` in `scripts/lemma-overrides.json` (o una coppia a `feminineNouns`) e rilancia. Dopo una ricostruzione elimina le cartelle di `dist/data/ranks` diverse dal nuovo `dataset`.
+
+La versione effettiva delle dipendenze del modello è registrata in `scripts/data-environment.txt`.
 
 ## Licenze e attribuzioni
 
 - Codice e interfaccia: MIT, © 2026 Lapo Santi (vedi LICENSE).
 - Vettori e dati derivati: **CC BY-NC-SA 3.0**, spaCy / Explosion e autori indicati in `dist/data/LICENSES-SOURCES.txt`. Il file `dist/data/LICENSE-model.txt` conserva la licenza originale. Questa licenza impone attribuzione, uso non commerciale e condivisione dei dati derivati con la stessa licenza. Non si estende automaticamente al codice del sito.
-- wordfreq: Robyn Speer e collaboratori; codice Apache 2.0, dati CC BY-SA 4.0. La selezione del vocabolario derivata dalle frequenze mantiene anche questi obblighi di attribuzione e condivisione. https://github.com/rspeer/wordfreq
+- Forme delle parole: **Morph-it!** di Marco Baroni ed Eros Zanchetta (CC BY-SA 2.0 / LGPL), tramite i file di Giovanni Toffoli in spacy-lookups-data. Attribuzione e licenza in `dist/data/LICENSES-SOURCES.txt`.
+- wordfreq: Robyn Speer e collaboratori; codice Apache 2.0, dati CC BY-SA 4.0. Usato per scegliere il vocabolario e per riconoscere grafie errate e parole straniere. https://github.com/rspeer/wordfreq
 - Nessuna affiliazione con Contexto. Nome, interfaccia e codice del progetto sono indipendenti.
 
+## Verifiche
 
-## Verificare la revisione semantica
+`npm test` verifica tutte le classifiche (una delle quali ricalcolata dai vettori), il cambio di giorno alla mezzanotte italiana, le unioni di genere e numero e le parole che devono restare separate, l'esclusione dei superlativi, le grafie errate, le comodità di scrittura (accenti, elisioni), la conversione dei salvataggi, gli aiuti, la condivisione e una partita completa nell'app simulata. Questi controlli non garantiscono che ogni associazione del modello corrisponda all'intuizione di ogni giocatore.
 
-`npm test` verifica tutte le classifiche, il passaggio di versione alla mezzanotte italiana e alcune relazioni semantiche di controllo. Verifica anche che parole prima associate forzatamente allo stesso vettore (per esempio “santifica”, “santità” e “castità”) abbiano rappresentazioni distinte. Questi controlli non garantiscono che ogni associazione del modello corrisponda all’intuizione di ogni giocatore.
-
-Per confrontare due edizioni senza stampare le soluzioni del calendario:
-
-```sh
-.venv/bin/python scripts/semantic-audit.py /percorso/dati-precedenti dist/data
-```
-
-Il confronto incluso in `scripts/semantic-audit.json` riporta le similarità coseno di alcune coppie di parole e le posizioni del caso segnalato, mantenendo nascosta la soluzione. Le posizioni si riferiscono sempre alla soluzione, non alla distanza fra due tentativi.
+`scripts/semantic-audit.py` confronta due edizioni dei vettori senza stampare le soluzioni del calendario; il risultato precedente è in `scripts/semantic-audit.json`.

@@ -23,7 +23,7 @@ def load(directory):
 before, old, old_ids = load(args.before)
 after, new, new_ids = load(args.after)
 assert before['words'] == after['words'], 'Word IDs must remain unchanged'
-assert before['targets'] == after['targets'], 'Daily solutions must remain unchanged'
+assert before.get('sourceTargets', before['targets']) == after.get('sourceTargets', after['targets']), 'The source calendar must remain unchanged'
 pairs = [
     ('santo', 'santifica'), ('santifica', 'santità'),
     ('santifica', 'castità'), ('santo', 'pio'), ('santo', 'santoro'),
@@ -38,7 +38,8 @@ for a, b in pairs:
                         'after': round(float(new[new_ids[a]] @ new[new_ids[b]]), 6)})
 # Identify the reported ranking by its two known positions, without disclosing its target.
 reported = None
-for target in before['targets']:
+# Only meaningful for two editions with full per-word rank tables (data version 2).
+for target in (before['targets'] if before.get('version') == after.get('version') == 2 else []):
     ranks = np.fromfile(args.before / 'ranks' / before['dataset'] / f'{target}.bin', dtype='<u4')
     if ranks[old_ids['santo']] == 1171 and ranks[old_ids['santifica']] == 116:
         next_ranks = np.fromfile(args.after / 'ranks' / after['dataset'] / f'{target}.bin', dtype='<u4')
