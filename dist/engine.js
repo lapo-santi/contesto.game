@@ -48,6 +48,7 @@ export function buildLexicon(data) {
     aliases: pairs(data.aliases),          // bella -> bello, gatte -> gatto
     superlatives: pairs(data.superlatives), // bellissimo -> bello
     misspellings: pairs(data.misspellings), // purtoppo -> purtroppo, with -> -1
+    names: new Map((data.names || []).map(id => [id, -1])), // roma, unicredit, iphone
   };
 }
 
@@ -62,13 +63,14 @@ export function resolveGuess(raw, lexicon, words) {
     // A missing final accent: perche -> perché, citta -> città.
     const accents = {a:['à'], e:['è','é'], i:['ì'], o:['ò'], u:['ù']}[word.at(-1)] || [];
     const found = accents.map(a => lexicon.lookup.get(word.slice(0, -1) + a)).filter(x => x !== undefined);
-    id = found.find(x => !lexicon.misspellings.has(x) && !lexicon.superlatives.has(x)) ?? found[0];
+    id = found.find(x => !lexicon.misspellings.has(x) && !lexicon.superlatives.has(x) && !lexicon.names.has(x)) ?? found[0];
   }
   if (id === undefined) return {kind: 'unknown', word};
   if (lexicon.superlatives.has(id)) {
     const base = lexicon.superlatives.get(id);
     return {kind: 'superlative', word, base: base >= 0 ? words[base] : null};
   }
+  if (lexicon.names.has(id)) return {kind: 'name', word};
   if (lexicon.misspellings.has(id)) {
     const s = lexicon.misspellings.get(id);
     return {kind: 'misspelling', word, suggestion: s >= 0 ? words[lexicon.aliases.get(s) ?? s] : null};

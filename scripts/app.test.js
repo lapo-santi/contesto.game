@@ -13,7 +13,7 @@ test('The example in the rules uses real positions and is not a future solution'
   assert.ok(!data.targets.includes(target));
   const vectors = new Int8Array(fs.readFileSync(new URL('../dist/data/vectors.bin', import.meta.url)));
   const playable = new Set(data.words.map((_, i) => i));
-  for (const m of [lexicon.aliases, lexicon.superlatives, lexicon.misspellings]) for (const k of m.keys()) playable.delete(k);
+  for (const m of [lexicon.aliases, lexicon.superlatives, lexicon.misspellings, lexicon.names]) for (const k of m.keys()) playable.delete(k);
   const {ranks} = rankVocabulary(vectors, data.dimensions, target, playable);
   for (const [word, rank] of example) assert.equal(ranks[lexicon.lookup.get(word)], rank, word);
 });
@@ -79,6 +79,8 @@ test('Playing a day in the browser app', async () => {
     guess('bellissimo');
     assert.equal(get('count').textContent, 1);
     assert.match(text(get('status')), /superlativi/);
+    guess('roma');
+    assert.match(text(get('status')), /Nomi propri/);
     guess('qwrtzx');
     assert.match(text(get('status')), /non è nel vocabolario/);
     guess('gatte');

@@ -22,6 +22,8 @@ from wordfreq import zipf_frequency
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('lookups', type=Path, help='spacy_lookups_data/data directory (spacy-lookups-data 1.0.5)')
+parser.add_argument('--hunspell', type=Path, required=True,
+                    help='Italian Hunspell dictionary without extension (e.g. dictionary-it 2.0.0: package/index)')
 parser.add_argument('--report', type=Path, help='Write every merge and exclusion to this TSV file')
 args = parser.parse_args()
 
@@ -131,6 +133,28 @@ for w, s in junk.items():
     excluded[w] = s
 print(f'{len(junk)} misspellings, truncations or English words removed')
 
+# 1c. Proper nouns, brands and acronyms ---------------------------------------
+# News text puts names next to common words (banca: unicredit, bankitalia).
+# A word is a name when the Italian spelling dictionary only accepts it
+# capitalised (roma, mario, facebook), or when neither the dictionary nor
+# Morph-it knows it at all (unicredit, salvini, iphone).
+from spylls.hunspell import Dictionary
+speller = Dictionary.from_files(str(args.hunspell))
+names = set()
+for w in words:
+    if w in excluded or w in accent_alias or w in overrides.get('alwaysPlayable', ()):
+        continue
+    if speller.lookup(w):
+        continue
+    if speller.lookup(w.capitalize()) or w not in known:
+        names.add(w)
+for w in names:
+    excluded[w] = None
+for w, s in list(excluded.items()):
+    if s in names:
+        excluded[w] = None
+print(f'{len(names)} proper nouns, brands and unknown words removed')
+
 # 2. Gender and number --------------------------------------------------------
 def shares_stem(a, b):
     n = min(len(a), len(b))
@@ -182,6 +206,21 @@ for w in words:
                         break
             if target:
                 break
+    # Regular plurals the lexicon misses: pomodorini -> pomodorino, banchi -> banco.
+    # Conjugated verbs are left alone (prende is not prenda); participles are merged.
+    if target is None and noun.get(w) is None and adj.get(w) is None and (
+            w not in verb or re.search(r'(at|it|ut)[ie]$', w)):
+        for suffix, repl in (('chi', ('co',)), ('ghi', ('go',)), ('che', ('ca',)), ('ghe', ('ga',)),
+                             ('ate', ('ato', 'ata')), ('ite', ('ito', 'ita')), ('ute', ('uto', 'uta')),
+                             ('i', ('o', 'e')), ('e', ('a',))):
+            if w.endswith(suffix) and len(w) > 4:
+                for r in repl:
+                    m = w[:-len(suffix)] + r
+                    if m in index and m not in excluded and cos(w, m) >= 0.55:
+                        target = m
+                        break
+            if target:
+                break
     if target and target != w and target not in excluded:
         parent[w] = target
 
@@ -212,11 +251,12 @@ for t in targets:
 
 playable = np.array([i for i, w in enumerate(words) if w not in canonical and w not in excluded], dtype=np.int64)
 aliases = sorted((index[w], index[c]) for w, c in canonical.items())
-removed = sorted((index[w], index[b] if b else -1) for w, b in excluded.items() if w not in junk)
+removed = sorted((index[w], index[b] if b else -1) for w, b in excluded.items() if w not in junk and w not in names)
+named = sorted(index[w] for w in names)
 misspelt = sorted((index[w], index[b] if b else -1) for w, b in excluded.items() if w in junk)
 
 # 4. Daily tables ---------------------------------------------------------------
-dataset = hashlib.sha256(raw.tobytes() + json.dumps([words, aliases, removed, misspelt]).encode()).hexdigest()[:16]
+dataset = hashlib.sha256(raw.tobytes() + json.dumps([words, aliases, removed, misspelt, named]).encode()).hexdigest()[:16]
 rank_dir = out / 'ranks' / dataset
 rank_dir.mkdir(parents=True, exist_ok=True)
 sub = ints[playable]
@@ -233,6 +273,7 @@ meta = {'version': 3, 'dataset': dataset, 'dimensions': dims, 'words': words, 't
         'aliases': [x for pair in aliases for x in pair],
         'superlatives': [x for pair in removed for x in pair],
         'misspellings': [x for pair in misspelt for x in pair],
+        'names': named,
         'playable': int(len(playable)),
         'source': meta['source'], 'licence': meta['licence'], 'model': meta['model'],
         'lemmas': 'Morph-it! 0.48 via spacy-lookups-data 1.0.5 (CC BY-SA 2.0 / LGPL) + scripts/lemma-overrides.json'}
@@ -242,6 +283,6 @@ if args.report:
         for w, c in sorted(canonical.items(), key=lambda x: index[x[0]]):
             f.write(f'alias\t{w}\t{c}\t{cos(w, c):.2f}\n')
         for w, b in sorted(excluded.items(), key=lambda x: index[x[0]]):
-            f.write(f'{"junk" if w in junk else "superlative"}\t{w}\t{b}\n')
-print(f'{len(words)} words: {len(playable)} playable entries, {len(aliases)} aliases, {len(removed)} superlatives, {len(misspelt)} misspellings; '
+            f.write(f'{"name" if w in names else "junk" if w in junk else "superlative"}\t{w}\t{b}\n')
+print(f'{len(words)} words: {len(playable)} playable entries, {len(aliases)} aliases, {len(removed)} superlatives, {len(misspelt)} misspellings, {len(named)} names; '
       f'{len(playable) * 4:,} bytes per daily table; dataset {dataset}')

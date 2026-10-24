@@ -2,7 +2,7 @@ import {italianDay,dayNumber,targetForDay,buildLexicon,resolveGuess,canonicalGue
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat('it-IT').format(n);
 // Real positions for a word that is not in the calendar (checked by the tests).
-export const EXAMPLE = [['delfino',24],['uccello',38],['animale',706],['ghiaccio',1188],['mare',3903],['pinza',34486]];
+export const EXAMPLE = [['delfino',24],['uccello',38],['animale',575],['ghiaccio',950],['mare',3101],['pinza',27024]];
 let data, lexicon, rankings, day, state, ready = false, storageWorks = true, confirmGiveUp = false;
 
 function store(key, value) {try {localStorage.setItem(key, value); return true;} catch {storageWorks = false; return false;}}
@@ -115,6 +115,7 @@ function submit() {
   const result = resolveGuess(raw, lexicon, data.words);
   if (result.kind === 'invalid') return message('Scrivi una sola parola, senza spazi, numeri o simboli.');
   if (result.kind === 'unknown') return message(`“${result.word}” non è nel vocabolario. Prova un sinonimo o una forma più comune.`);
+  if (result.kind === 'name') return message(`Nomi propri, marchi e sigle non sono nel gioco: prova una parola comune.`);
   if (result.kind === 'superlative') return message('I superlativi non valgono. Prova:', result.base);
   if (result.kind === 'misspelling') return result.suggestion
     ? message(`“${result.word}” non è nel gioco. Forse intendevi:`, result.suggestion)

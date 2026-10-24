@@ -12,7 +12,7 @@ const table = target => {
 };
 const playableIds = () => {
   const out = new Set(data.words.map((_, i) => i));
-  for (const m of [lexicon.aliases, lexicon.superlatives, lexicon.misspellings]) for (const k of m.keys()) out.delete(k);
+  for (const m of [lexicon.aliases, lexicon.superlatives, lexicon.misspellings, lexicon.names]) for (const k of m.keys()) out.delete(k);
   return out;
 };
 
@@ -53,13 +53,13 @@ test('Semantic ranks use cosine similarity, not spelling', () => {
 test('Gender and number forms share one entry', () => {
   for (const [form, lemma] of [['bella', 'bello'], ['belle', 'bello'], ['belli', 'bello'], ['gatte', 'gatto'], ['gatta', 'gatto'],
     ['gatti', 'gatto'], ['ragazza', 'ragazzo'], ['amiche', 'amico'], ['case', 'casa'], ['attrice', 'attore'], ['studentessa', 'studente'],
-    ['grandi', 'grande'], ['uova', 'uovo']]) {
+    ['grandi', 'grande'], ['uova', 'uovo'], ['pomodorini', 'pomodorino'], ['trovate', 'trovato']]) {
     const r = resolveGuess(form, lexicon, data.words);
     assert.equal(r.kind, 'ok', form);
     assert.equal(data.words[r.id], lemma, form);
   }
   // Different words that only look like gender pairs stay apart.
-  for (const word of ['porta', 'porto', 'casa', 'caso', 'politica', 'musica', 'partita', 'fisica', 'moda', 'modo', 'pianta', 'volta', 'torta', 'soldi', 'occhiali', 'forbici', 'dei', 'tenere', 'leggere']) {
+  for (const word of ['prende', 'serve', 'porta', 'porto', 'casa', 'caso', 'politica', 'musica', 'partita', 'fisica', 'moda', 'modo', 'pianta', 'volta', 'torta', 'soldi', 'occhiali', 'forbici', 'dei', 'tenere', 'leggere']) {
     const r = resolveGuess(word, lexicon, data.words);
     assert.equal(r.kind, 'ok', word);
     assert.equal(data.words[r.id], word, word);
@@ -79,6 +79,18 @@ test('Superlatives, misspellings and foreign words are not playable', () => {
   assert.equal(resolveGuess('computer', lexicon, data.words).kind, 'ok');
   assert.equal(resolveGuess('due parole', lexicon, data.words).kind, 'invalid');
   assert.equal(resolveGuess('zzzzqq', lexicon, data.words).kind, 'unknown');
+});
+
+test('Proper nouns, brands and acronyms are not playable', () => {
+  for (const word of ['unicredit', 'bankitalia', 'roma', 'milano', 'facebook', 'salvini', 'iphone']) {
+    assert.equal(resolveGuess(word, lexicon, data.words).kind, 'name', word);
+  }
+  for (const word of ['banca', 'bancario', 'credito', 'computer', 'internet', 'tiramisù', 'euro']) {
+    assert.equal(resolveGuess(word, lexicon, data.words).kind, 'ok', word);
+  }
+  const {ordered} = table(id('banca'));
+  const near = [...ordered.slice(0, 50)].map(i => data.words[i]);
+  for (const word of ['unicredit', 'bankitalia', 'intesa']) assert.ok(!near.includes(word), word);
 });
 
 test('Typing conveniences: elision, missing accents, apostrophe accents', () => {
