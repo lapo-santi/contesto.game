@@ -95,7 +95,12 @@ test('Playing a day in the browser app', async () => {
     get('give-up').listeners.click();
     assert.equal(get('reveal').hidden, false);
     assert.equal(get('reveal').children[1].textContent, data.words[targetForDay('2026-10-21', data.targets)]);
-    assert.equal(get('share').hidden, false);
+    assert.equal(get('summary').hidden, false);
+    const record = JSON.parse(saved.get('contesto-history'))['2026-10-21'];
+    assert.equal(record.r, 'lost');
+    assert.equal(record.a, 2);       // belle (= bello) and gatte (= gatto); the hint is separate
+    assert.equal(record.h, 1);
+    assert.equal(record.p.length, 3);
     assert.equal(get('word').disabled, true);
 
     // A new day starts at Italian midnight with an empty game.

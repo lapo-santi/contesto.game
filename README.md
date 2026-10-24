@@ -8,6 +8,12 @@ Alla prima visita si apre la schermata **Come si gioca**; finché non si prova u
 
 Scrivi una parola e premi Invio. La posizione 1 è la soluzione. Le parole provate sono ordinate dalla più vicina alla più lontana, con colori dal viola (lontano) al verde lime (vicino); sotto 300 la parola è “calda”, sotto 50 “bollente”. I tentativi validi e distinti sono contati e salvati nel browser per ciascun giorno. Gli aiuti sono registrati separatamente: ogni aiuto mostra una parola a metà strada fra il tuo tentativo migliore e la soluzione, mai oltre la posizione 300. “Mi arrendo” (con conferma) mostra la soluzione. A fine partita compaiono la parola e le dieci più vicine, e il risultato si può condividere senza rivelare la parola.
 
+### Condividere la partita e le statistiche
+
+A fine partita compare **La tua partita**: un'immagine 1080×1350 con il numero reale di tentativi (e di aiuti), il *percorso* (una barra per tentativo, nell'ordine in cui sono stati fatti, alta quanto la parola era vicina; gli aiuti sono più chiari, la soluzione ha la stella), quanti tentativi erano caldi, tiepidi o freddi e la posizione più vicina prima della soluzione. Non mostra mai le parole. “Condividi partita” usa la condivisione del telefono quando accetta immagini; altrimenti scarica il PNG e copia il testo. “Copia testo” copia solo il riepilogo a emoji.
+
+Il pulsante **Statistiche** (sempre in alto) apre la storia del giocatore: partite, percentuale vinte, serie attuale e record, media e miglior numero di tentativi, distribuzione dei tentativi per le parole trovate e le ultime quattro settimane giorno per giorno. Anche questa è condivisibile come immagine o testo. La storia è un record compatto per giorno in `localStorage` (`contesto-history`: edizione, tentativi, aiuti, esito e posizioni, senza parole); le partite salvate prima di questa versione vengono recuperate automaticamente.
+
 La classifica riguarda le parole del giocatore, non una classifica pubblica tra giocatori. Il salvataggio è locale: non si trasferisce tra dispositivi e si perde cancellando i dati del sito.
 
 ## Forme delle parole

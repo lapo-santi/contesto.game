@@ -6,13 +6,16 @@
 <meta name="theme-color" content="#f6f7f2">
 <meta name="description" content="Una parola segreta al giorno. Segui il significato, trova il contesto.">
 <title>contesto.it — La sfida del giorno</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div class="shell">
 <header>
   <a class="brand" href="./">contesto<span class="brand-dot">.it</span></a>
-  <button class="pill" id="help" aria-haspopup="dialog">Come si gioca <span aria-hidden="true">?</span></button>
+  <div class="header-actions">
+    <button class="pill" id="stats-open" aria-haspopup="dialog" aria-label="Statistiche"><b class="pill-label">Statistiche</b> <span aria-hidden="true" class="bars-icon"><i></i><i></i><i></i></span></button>
+    <button class="pill" id="help" aria-haspopup="dialog" aria-label="Come si gioca"><b class="pill-label">Come si gioca</b> <span aria-hidden="true">?</span></button>
+  </div>
 </header>
 <main>
   <div class="eyebrow"><span class="dot"></span> UNA NUOVA PAROLA, OGNI GIORNO <span id="edition"></span></div>
@@ -29,6 +32,15 @@
     <p id="status" role="status" aria-live="polite">Caricamento del vocabolario italiano…</p>
 
     <div id="reveal" hidden></div>
+    <section id="summary" class="summary" hidden aria-labelledby="summary-title">
+      <div class="summary-head"><h2 id="summary-title">La tua partita</h2><span>DA CONDIVIDERE, SENZA SVELARE LA PAROLA</span></div>
+      <img id="summary-image" class="share-image" alt="">
+      <div class="share-buttons">
+        <button id="share" class="primary">Condividi partita ↗</button>
+        <button id="copy-game" class="secondary">Copia testo</button>
+        <button id="stats-from-game" class="secondary">Le mie statistiche</button>
+      </div>
+    </section>
     <div id="last" aria-label="Ultimo tentativo"></div>
 
     <div class="list-heading" id="list-heading" hidden><h2>Le tue parole</h2><span>PIÙ VICINE PER PRIME</span></div>
@@ -58,7 +70,6 @@
     <div class="actions">
       <button id="hint" disabled>Un piccolo aiuto</button>
       <button id="give-up" disabled>Mi arrendo</button>
-      <button id="share" class="primary" hidden>Condividi risultato ↗</button>
     </div>
   </section>
 
@@ -86,6 +97,18 @@
   <button id="start" class="start">Inizia a giocare</button>
   <p class="credit">Vettori italiani: spaCy it_core_news_lg (CC BY-NC-SA 3.0). Forme delle parole: Morph-it! (CC BY-SA 2.0). Gioco indipendente ispirato a Contexto.</p>
 </dialog>
-<script type="module" src="app.js?v=4"></script>
+<dialog id="stats" aria-labelledby="stats-heading">
+  <button id="stats-close" class="icon" aria-label="Chiudi">×</button>
+  <div class="eyebrow">LA TUA STORIA</div>
+  <h2 id="stats-heading">Le mie statistiche</h2>
+  <p id="stats-empty" class="stats-empty" hidden>Non hai ancora completato nessuna partita su questo browser. Trova la parola di oggi e torna qui: la tua serie comincia adesso.</p>
+  <img id="stats-image" class="share-image" alt="">
+  <div class="share-buttons">
+    <button id="share-stats" class="primary">Condividi statistiche ↗</button>
+    <button id="copy-stats" class="secondary">Copia testo</button>
+  </div>
+  <p class="credit">Le statistiche restano in questo browser: non si sincronizzano tra dispositivi.</p>
+</dialog>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>

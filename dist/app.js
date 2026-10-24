@@ -1,13 +1,40 @@
-import {italianDay,dayNumber,targetForDay,buildLexicon,resolveGuess,canonicalGuesses,decodeRankings,rowStyle,band,hintRank,shareText,nextMidnight} from './engine.js?v=4';
+import {italianDay,dayNumber,targetForDay,buildLexicon,resolveGuess,canonicalGuesses,decodeRankings,rowStyle,band,hintRank,shareText,statsText,nextMidnight,
+  HISTORY_KEY,summariseGame,backfillHistory,computeStats} from './engine.js?v=5';
+import {render as renderImage, drawGame, drawStats, fontsReady} from './share.js?v=5';
 const $ = id => document.getElementById(id);
 const fmt = n => new Intl.NumberFormat('it-IT').format(n);
 // Real positions for a word that is not in the calendar (checked by the tests).
 export const EXAMPLE = [['delfino',24],['uccello',38],['animale',575],['ghiaccio',950],['mare',3101],['pinza',27024]];
-let data, lexicon, rankings, day, state, ready = false, storageWorks = true, confirmGiveUp = false;
+let data, lexicon, rankings, day, state, history = {}, ready = false, storageWorks = true, confirmGiveUp = false;
+const images = {game: null, stats: null};
 
 function store(key, value) {try {localStorage.setItem(key, value); return true;} catch {storageWorks = false; return false;}}
 function read(key) {try {return localStorage.getItem(key);} catch {storageWorks = false; return null;}}
-function save() {store('contesto-v1-' + day, JSON.stringify(state));}
+function save() {
+  store('contesto-v1-' + day, JSON.stringify(state));
+  if (state.guesses.length) {
+    history[day] = {e: dayNumber(day) + 1, ...summariseGame(state, rankings.ranks)};
+    store(HISTORY_KEY, JSON.stringify(history));
+  }
+}
+// The history keeps one small record per day, so a returning player can see and share their record.
+function loadHistory() {
+  try {history = JSON.parse(read(HISTORY_KEY)) || {};} catch {history = {};}
+  const saved = {};
+  try {
+    for (let i = 0; i < (localStorage.length || 0); i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('contesto-v1-')) saved[key.slice(12)] = JSON.parse(localStorage.getItem(key));
+    }
+  } catch {}
+  const before = Object.keys(history).length;
+  history = backfillHistory(history, saved, data.targets, lexicon.aliases);
+  if (Object.keys(history).length !== before) store(HISTORY_KEY, JSON.stringify(history));
+}
+const pageUrl = () => location.href.split(/[?#]/)[0];
+const shortUrl = () => pageUrl().replace(/^https?:\/\//, '').replace(/\/$/, '');
+const dateLabel = d => new Intl.DateTimeFormat('it-IT', {day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Rome'}).format(new Date(d + 'T12:00:00Z'));
+const stats = () => computeStats(history, day);
 function load() {
   try {
     const raw = JSON.parse(read('contesto-v1-' + day));
@@ -60,7 +87,8 @@ function render() {
   for (const id of ['word', 'submit', 'hint', 'give-up']) $(id).disabled = over || !ready;
   if (over) $('word').value = '';
   $('give-up').hidden = over; $('hint').hidden = over;
-  $('share').hidden = !over;
+  $('summary').hidden = !over;
+  if (over) void updateGameImage();
   renderReveal(won, over);
   if (won) message(`Trovata in ${count} ${count === 1 ? 'tentativo' : 'tentativi'}${state.hints ? ` e ${state.hints} ${state.hints === 1 ? 'aiuto' : 'aiuti'}` : ''}. Torna domani per una nuova parola.`);
   else if (state.gaveUp) message('Ti sei arreso: ecco la parola di oggi. Torna domani per una nuova sfida.');
@@ -155,14 +183,65 @@ $('give-up').addEventListener('click', () => {
   }
   state.gaveUp = true; save(); render();
 });
-$('share').addEventListener('click', async () => {
-  const text = shareText({day, edition: dayNumber(day) + 1, count: state.guesses.filter(g => !g.hint).length, hints: state.hints, gaveUp: state.gaveUp,
-    ranks: state.guesses.filter(g => !g.hint).map(g => rankings.ranks[g.id]), url: location.href.split(/[?#]/)[0]});
+function gameText() {
+  const counted = state.guesses.filter(g => !g.hint);
+  return shareText({day, edition: dayNumber(day) + 1, count: counted.length, hints: state.hints, gaveUp: state.gaveUp,
+    ranks: counted.map(g => rankings.ranks[g.id]), url: pageUrl(), streak: stats().current});
+}
+async function updateGameImage() {
   try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({text});
-    else {await navigator.clipboard.writeText(text); message('Risultato copiato: puoi condividerlo senza svelare la parola.');}
-  } catch (error) {if (error?.name !== 'AbortError') message(text);}
-});
+    await fontsReady();
+    const game = summariseGame(state, rankings.ranks), s = stats();
+    images.game = renderImage(drawGame, {edition: dayNumber(day) + 1, dateLabel: dateLabel(day), attempts: game.a, hints: game.h, result: game.r,
+      path: game.p, best: game.b, size: data.playable, streak: s.current, played: s.played, url: shortUrl()});
+    $('summary-image').src = images.game.toDataURL('image/png');
+    $('summary-image').alt = `Riepilogo: ${game.r === 'won' ? 'parola trovata' : 'resa'} in ${game.a} tentativi${game.h ? ` e ${game.h} aiuti` : ''}; un grafico mostra quanto ogni tentativo era vicino alla soluzione.`;
+  } catch (error) {images.game = null; $('summary-image').hidden = true; console.warn(error);}
+}
+async function updateStatsImage() {
+  const s = stats();
+  $('stats-empty').hidden = s.played > 0 || !!history[day];
+  try {
+    await fontsReady();
+    images.stats = renderImage(drawStats, {stats: s, today: day, todayAttempts: history[day]?.r === 'won' ? history[day].a : null, dateLabel: dateLabel(day), url: shortUrl()});
+    $('stats-image').src = images.stats.toDataURL('image/png');
+    $('stats-image').alt = `${s.played} partite, ${s.winRate}% vinte, serie attuale ${s.current}, record ${s.max}` + (s.average !== null ? `, media ${s.average} tentativi.` : '.');
+  } catch (error) {images.stats = null; $('stats-image').hidden = true; console.warn(error);}
+}
+
+// Share the image where the device supports it; otherwise download it and copy the text.
+async function share(canvas, filename, text, done) {
+  try {
+    const blob = canvas && await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = blob && new File([blob], filename, {type: 'image/png'});
+    if (file && navigator.canShare?.({files: [file]})) {await navigator.share({files: [file], text}); return;}
+    if (blob) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob); link.download = filename; link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+    }
+    await navigator.clipboard.writeText(text);
+    done(blob ? 'Immagine scaricata e testo copiato: incollali dove vuoi.' : 'Testo copiato: puoi condividerlo senza svelare la parola.');
+  } catch (error) {if (error?.name !== 'AbortError') done(text);}
+}
+async function copy(text, done) {
+  try {await navigator.clipboard.writeText(text); done('Testo copiato.');} catch {done(text);}
+}
+const statsNote = text => {$('stats-empty').hidden = false; $('stats-empty').textContent = text;};
+$('share').addEventListener('click', () => share(images.game, `contesto-${day}.png`, gameText(), message));
+$('copy-game').addEventListener('click', () => copy(gameText(), message));
+$('share-stats').addEventListener('click', () => share(images.stats, `contesto-statistiche-${day}.png`, statsText(stats(), pageUrl()), statsNote));
+$('copy-stats').addEventListener('click', () => copy(statsText(stats(), pageUrl()), statsNote));
+async function openStats() {
+  if (!data) return;
+  $('stats-empty').textContent = 'Non hai ancora completato nessuna partita su questo browser. Trova la parola di oggi e torna qui: la tua serie comincia adesso.';
+  if (!$('stats').open) $('stats').showModal();
+  await updateStatsImage();
+}
+$('stats-open').addEventListener('click', openStats);
+$('stats-from-game').addEventListener('click', openStats);
+$('stats-close').addEventListener('click', () => $('stats').close());
+$('stats').addEventListener('click', event => {if (event.target === $('stats')) $('stats').close();});
 
 function openRules() {if (!$('instructions').open) $('instructions').showModal();}
 function closeRules() {$('instructions').close();}
@@ -188,11 +267,12 @@ renderExamples();
 // First visit: show the rules before the first attempt.
 if (!read('contesto-rules-seen') && typeof $('instructions').showModal === 'function') openRules();
 try {
-  const meta = await fetch('./data/vocabulary.json?v=4');
+  const meta = await fetch('./data/vocabulary.json?v=5');
   if (!meta.ok) throw new Error('Vocabolario non disponibile');
   data = await meta.json();
   if (data.version !== 3 || !/^[a-f0-9]{16}$/.test(data.dataset)) throw new Error('Versione dati non valida');
   lexicon = buildLexicon(data);
+  loadHistory();
   await startDay(); tick(); setInterval(tick, 1000);
   document.addEventListener('visibilitychange', () => {if (!document.hidden) tick();});
 } catch (error) {

@@ -116,18 +116,79 @@ export function hintRank(best, used, ordered) {
   return rank > 1 ? rank : null;
 }
 
-export function shareText({day, edition, count, hints, gaveUp, ranks, url}) {
+export function shareText({day, edition, count, hints, gaveUp, ranks, url, streak = 0}) {
   const counts = [0, 0, 0];
   for (const r of ranks) counts[r <= 300 ? 0 : r <= 1500 ? 1 : 2]++;
-  const bar = (emoji, n) => n ? `${emoji.repeat(Math.max(1, Math.round(n / Math.max(...counts, 1) * 8)))} ${n}` : '';
+  const bar = (emoji, n, label) => n ? `${emoji.repeat(Math.max(1, Math.round(n / Math.max(...counts, 1) * 8)))} ${n} ${label}` : '';
   const lines = [`contesto.it #${edition} · ${day}`,
-    gaveUp ? `Mi sono arreso dopo ${count} tentativi.` : `Trovata in ${count} tentativi${hints ? ` e ${hints} ${hints === 1 ? 'aiuto' : 'aiuti'}` : ''}!`,
-    bar('🟩', counts[0]), bar('🟨', counts[1]), bar('🟥', counts[2]), url];
+    gaveUp ? `Mi sono arreso dopo ${count} ${count === 1 ? 'tentativo' : 'tentativi'}.` : `Trovata in ${count} ${count === 1 ? 'tentativo' : 'tentativi'}${hints ? ` e ${hints} ${hints === 1 ? 'aiuto' : 'aiuti'}` : ''}!`,
+    bar('🟩', counts[0], 'caldi'), bar('🟨', counts[1], 'tiepidi'), bar('🟥', counts[2], 'freddi'),
+    streak > 1 ? `🔥 Serie di ${streak} giorni` : '', url];
   return lines.filter(Boolean).join('\n');
+}
+
+export function statsText(stats, url) {
+  return [`contesto.it · le mie statistiche`,
+    `${stats.played} ${stats.played === 1 ? 'partita' : 'partite'} · ${stats.winRate}% vinte`,
+    `🔥 Serie attuale ${stats.current} · record ${stats.max}`,
+    stats.average !== null ? `Media ${stats.average} tentativi · migliore ${stats.best}` : '', url].filter(Boolean).join('\n');
 }
 
 export function nextMidnight(now = new Date()) {
   const today = italianDay(now); let low = now.getTime(), high = low + 27*3600000;
   while (high - low > 1000) {const mid = Math.floor((low + high) / 2); if (italianDay(new Date(mid)) === today) low = mid; else high = mid;}
   return high;
+}
+
+// ---- Player history ---------------------------------------------------------
+// One entry per Italian day: {e: edition, a: attempts, h: hints, r: 'won'|'lost'|'open', p: [[rank, hint], ...]}.
+export const HISTORY_KEY = 'contesto-history';
+export const PATH_LIMIT = 400;
+
+export function summariseGame(state, ranks) {
+  const path = state.guesses.map(g => [ranks[g.id], g.hint ? 1 : 0]);
+  const attempts = state.guesses.filter(g => !g.hint).length;
+  const won = path.some(([r]) => r === 1);
+  const before = path.filter(([r]) => r > 1).map(([r]) => r);
+  return {a: attempts, h: state.hints || 0, r: won ? 'won' : state.gaveUp ? 'lost' : 'open',
+    b: before.length ? Math.min(...before) : null, p: path.slice(0, PATH_LIMIT)};
+}
+
+// Games saved before the history existed: a day counts as won when a guess is the solution.
+export function backfillHistory(history, saved, targets, aliases) {
+  const out = {...history};
+  for (const [d, raw] of Object.entries(saved)) {
+    if (out[d] || !raw || !Array.isArray(raw.guesses) || !/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+    const target = targetForDay(d, targets);
+    const ids = raw.guesses.map(g => aliases.get(g.id) ?? g.id);
+    if (!ids.length) continue;
+    const won = ids.includes(target);
+    out[d] = {e: dayNumber(d) + 1, a: raw.guesses.filter(g => !g.hint).length, h: Number(raw.hints) || 0,
+      r: won ? 'won' : raw.gaveUp ? 'lost' : 'open', b: null, p: null};
+  }
+  return out;
+}
+
+const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+export const BUCKETS = [[1, 10], [11, 20], [21, 35], [36, 50], [51, 100], [101, 200], [201, Infinity]];
+export const bucketLabel = ([lo, hi]) => hi === Infinity ? `${lo}+` : `${lo}–${hi}`;
+
+export function computeStats(history, today, days = 28) {
+  const entries = Object.entries(history).filter(([d]) => d <= today).sort(([a], [b]) => a < b ? -1 : 1);
+  const finished = entries.filter(([d, g]) => g.r !== 'open' || d < today);
+  const wins = finished.filter(([, g]) => g.r === 'won');
+  // Streak: consecutive days won, ending today (or yesterday while today is still open).
+  const wonOn = new Set(wins.map(([d]) => d));
+  let current = 0, cursor = wonOn.has(today) ? today : addDays(today, -1);
+  while (wonOn.has(cursor)) {current++; cursor = addDays(cursor, -1);}
+  let max = 0, run = 0, prev = null;
+  for (const [d] of wins) {run = prev && addDays(prev, 1) === d ? run + 1 : 1; max = Math.max(max, run); prev = d;}
+  const distribution = BUCKETS.map(([lo, hi]) => wins.filter(([, g]) => g.a >= lo && g.a <= hi).length);
+  const recent = [];
+  for (let i = days - 1; i >= 0; i--) {const d = addDays(today, -i); recent.push({day: d, game: history[d] || null});}
+  const total = wins.reduce((s, [, g]) => s + g.a, 0);
+  return {played: finished.length, won: wins.length, lost: finished.length - wins.length,
+    winRate: finished.length ? Math.round(100 * wins.length / finished.length) : 0,
+    current, max: Math.max(max, current), average: wins.length ? Math.round(total / wins.length) : null,
+    best: wins.length ? Math.min(...wins.map(([, g]) => g.a)) : null, distribution, recent};
 }

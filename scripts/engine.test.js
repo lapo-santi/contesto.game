@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {italianDay,dayNumber,targetForDay,rankVocabulary,normalise,nextMidnight,decodeRankings,buildLexicon,resolveGuess,canonicalGuesses,hintRank,shareText} from '../dist/engine.js';
+import {italianDay,dayNumber,targetForDay,rankVocabulary,normalise,nextMidnight,decodeRankings,buildLexicon,resolveGuess,canonicalGuesses,hintRank,shareText,statsText,summariseGame,backfillHistory,computeStats} from '../dist/engine.js';
 
 const data = JSON.parse(fs.readFileSync(new URL('../dist/data/vocabulary.json', import.meta.url)));
 const lexicon = buildLexicon(data);
@@ -160,4 +160,47 @@ test('Hints and saved games', () => {
   const text = shareText({day: '2026-10-21', edition: 16, count: 3, hints: 1, gaveUp: false, ranks: [1, 200, 5000], url: 'https://x/'});
   assert.match(text, /Trovata in 3 tentativi e 1 aiuto/);
   assert.match(text, /🟩+ 2/); assert.match(text, /🟥+ 1/);
+});
+
+test('Game summary keeps the real number of attempts and the path, never the words', () => {
+  const ranks = new Uint32Array([0, 5000, 120, 1, 40]);
+  const game = summariseGame({guesses: [{id: 1}, {id: 2}, {id: 4, hint: true}, {id: 3}], hints: 1, gaveUp: false}, ranks);
+  assert.deepEqual(game, {a: 3, h: 1, r: 'won', b: 40, p: [[5000, 0], [120, 0], [40, 1], [1, 0]]});
+  assert.equal(summariseGame({guesses: [{id: 1}], hints: 0, gaveUp: true}, ranks).r, 'lost');
+  assert.equal(summariseGame({guesses: [{id: 1}], hints: 0, gaveUp: false}, ranks).r, 'open');
+  assert.ok(Object.entries(game).every(([k, v]) => k === 'r' || typeof v !== 'string'), 'no words are stored');
+});
+
+test('Player history: streaks, win rate, distribution and the last four weeks', () => {
+  const g = (a, r = 'won') => ({e: 1, a, h: 0, r, b: null, p: null});
+  const history = {'2026-10-10': g(8), '2026-10-11': g(30), '2026-10-12': g(12), '2026-10-14': g(40, 'lost'),
+    '2026-10-16': g(5), '2026-10-17': g(220), '2026-10-18': g(60), '2026-10-19': g(3, 'open')};
+  const s = computeStats(history, '2026-10-19');
+  assert.equal(s.played, 7);             // today's open game is not counted yet
+  assert.equal(s.won, 6);
+  assert.equal(s.winRate, 86);
+  assert.equal(s.current, 3);            // 16, 17, 18 October
+  assert.equal(s.max, 3);
+  assert.equal(s.best, 5);
+  assert.equal(s.average, Math.round((8 + 30 + 12 + 5 + 220 + 60) / 6));
+  assert.deepEqual(s.distribution, [2, 1, 1, 0, 1, 0, 1]);
+  assert.equal(s.recent.length, 28);
+  assert.equal(s.recent.at(-1).day, '2026-10-19');
+  assert.equal(computeStats({...history, '2026-10-19': g(9)}, '2026-10-19').current, 4);
+  assert.equal(computeStats(history, '2026-10-21').current, 0);   // a missed day breaks the streak
+  assert.match(statsText(s, 'https://x/'), /7 partite · 86% vinte/);
+  assert.match(shareText({day: 'd', edition: 1, count: 2, hints: 0, gaveUp: false, ranks: [1, 40], url: 'u', streak: 4}), /Serie di 4 giorni/);
+});
+
+test('Games saved before the history are recovered from the daily saves', () => {
+  const day = '2026-10-12', target = targetForDay(day, data.targets);
+  const restored = backfillHistory({}, {[day]: {guesses: [{id: id('belle')}, {id: target}], hints: 0},
+    '2026-10-13': {guesses: [{id: id('casa')}], hints: 0, gaveUp: true}, 'junk': {guesses: []}}, data.targets, lexicon.aliases);
+  assert.equal(restored[day].r, 'won');
+  assert.equal(restored[day].a, 2);
+  assert.equal(restored[day].e, dayNumber(day) + 1);
+  assert.equal(restored['2026-10-13'].r, 'lost');
+  assert.equal(Object.keys(restored).length, 2);
+  const kept = backfillHistory({[day]: {a: 99}}, {[day]: {guesses: [{id: target}]}}, data.targets, lexicon.aliases);
+  assert.equal(kept[day].a, 99);
 });
