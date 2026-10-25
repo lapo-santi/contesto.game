@@ -159,7 +159,7 @@ function submit() {
   if (!finished()) {
     const rank = rankings.ranks[result.id];
     const note = result.form ? `“${result.form}” vale come “${word}”. ` : '';
-    message(note + (rank <= 50 ? 'Bollente!' : rank <= 300 ? 'Fa caldo qui.' : rank <= 1500 ? 'Tiepido.' : 'Freddo: prova un altro campo di significato.'));
+    message(note + (rank <= 50 ? 'Fuochino!' : rank <= 300 ? 'Fa caldo qui.' : rank <= 1500 ? 'Tiepido.' : 'Freddo: prova un altro campo di significato.'));
   }
   $('word').focus();
 }

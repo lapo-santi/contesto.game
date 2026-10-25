@@ -91,7 +91,7 @@ export function canonicalGuesses(guesses, lexicon, ranks) {
 }
 
 export const BANDS = [
-  {max: 50, label: 'bollente', emoji: '🟩'},
+  {max: 50, label: 'fuochino', emoji: '🟩'},
   {max: 300, label: 'caldo', emoji: '🟩'},
   {max: 1500, label: 'tiepido', emoji: '🟨'},
   {max: Infinity, label: 'freddo', emoji: '🟥'},
